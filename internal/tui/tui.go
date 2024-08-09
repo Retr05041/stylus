@@ -3,60 +3,78 @@ package tui
 import (
 	"fmt"
 	"log"
-	"os"
+	"net/http"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func Start() {
-	// Log to a file. Useful in debugging since you can't really log to stdout.
-	// Not required.
-	logfilePath := os.Getenv("BUBBLETEA_LOG")
-	if logfilePath != "" {
-		if _, err := tea.LogToFile(logfilePath, "simple"); err != nil {
-			log.Fatal(err)
-		}
-	}
+const url = "https://codesociety.xyz/"
 
-	// Initialize our program
-	p := tea.NewProgram(model(5))
+type model struct {
+	status int
+	err    error
+}
+
+type statusMsg int
+
+type errMsg struct{ error }
+
+func (e errMsg) Error() string { return e.error.Error() }
+
+func Start() {
+	p := tea.NewProgram(model{})
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-type model int
-
 func (m model) Init() tea.Cmd {
-	return tick
+	return checkServer
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q":
+		case "q", "ctrl+c", "esc":
 			return m, tea.Quit
+		default:
+			return m, nil
 		}
 
-	case tickMsg:
-		m--
-		if m <= 0 {
-			return m, tea.Quit
-		}
-		return m, tick
+	case statusMsg:
+		m.status = int(msg)
+		return m, tea.Quit
+
+	case errMsg:
+		m.err = msg
+		return m, nil
+
+	default:
+		return m, nil
 	}
-	return m, nil
 }
 
 func (m model) View() string {
-	return fmt.Sprintf("Hi. This program will exit in %d seconds.\n\nTo quit sooner press q...\n", m)
+	s := fmt.Sprintf("Checking %s...", url)
+	if m.err != nil {
+		s += fmt.Sprintf("something went wrong: %s", m.err)
+	} else if m.status != 0 {
+		s += fmt.Sprintf("%d %s", m.status, http.StatusText(m.status))
+	}
+	return s + "\n"
 }
 
-type tickMsg time.Time
+func checkServer() tea.Msg {
+	c := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	res, err := c.Get(url)
+	if err != nil {
+		return errMsg{err}
+	}
+	defer res.Body.Close() // nolint:errcheck
 
-func tick() tea.Msg {
-	time.Sleep(time.Second)
-	return tickMsg{}
+	return statusMsg(res.StatusCode)
 }
