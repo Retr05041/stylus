@@ -5,19 +5,16 @@ import (
 	"fmt"
 	"github.com/machinebox/graphql"
 	"log"
-	"encoding/json"
 )
 
 type Session struct {
-	Data struct {
-		Login struct {
-			Token string `json:"token"`
-			User  struct {
-				ID       string `json:"id"`
-				Username string `json:"username"`
-			} `json:"user"`
-		} `json:"login"`
-	} `json:"data"`
+	Login struct {
+		Token string `json:"token"`
+		User  struct {
+			ID       string `json:"id"`
+			Username string `json:"username"`
+		} `json:"user"`
+	} `json:"login"`
 }
 
 func Init(email string, password string) {
@@ -44,13 +41,9 @@ func Init(email string, password string) {
 		log.Fatal(err)
 	} 
 
-	// Print the raw response for debugging
-	respBytes, _ := json.MarshalIndent(loginResp, "", "  ")
-	fmt.Println("Response:", string(respBytes))
-
 	// Access and print the username
-	if loginResp.Data.Login.User.Username != "" {
-		fmt.Println("Logged in as " + loginResp.Data.Login.User.Username)
+	if loginResp.Login.User.Username != "" {
+		fmt.Println("Logged in as " + loginResp.Login.User.Username)
 	} else {
 		fmt.Println("Username field not found in response.")
 	}
