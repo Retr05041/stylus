@@ -1,7 +1,11 @@
 package main
 
-import "stylus/internal/tui"
+import (
+	//"stylus/internal/tui"
+	"stylus/internal/api"
+)
 
 func main() {
-    tui.Start()
+	api.Init("", "")
+    //tui.Start()
 }

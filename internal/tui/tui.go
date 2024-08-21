@@ -10,6 +10,10 @@ import (
 )
 
 const url = "https://codesociety.xyz/"
+// Api url: https://api.codesociety.xyz/api
+// Api Playground: https://api.codesociety.xyz/graphiql
+// Api Docs: https://graphdoc.io/preview/?endpoint=https://api.codesociety.xyz/api
+// GraphQL Docs: https://graphql.org/learn/
 
 type model struct {
 	status int
