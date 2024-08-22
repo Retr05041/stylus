@@ -32,6 +32,7 @@ var (
 	// Program
 	programStyle lipgloss.Style
 	bannerStyle  lipgloss.Style
+	centerStyle  lipgloss.Style
 
 	// Login
 	focusedSignInStyle   lipgloss.Style
@@ -69,8 +70,8 @@ func InitModel() model {
 	if err != nil {
 		log.Fatal(err)
 	}
-	programWidth = termWidth-2
-	programHeight = termHeight-2
+	programWidth = termWidth - 2
+	programHeight = termHeight - 2
 
 	// Program
 	programStyle = lipgloss.NewStyle().
@@ -80,8 +81,10 @@ func InitModel() model {
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#ffffff"))
 	bannerStyle = lipgloss.NewStyle().
+		Align(lipgloss.Center, lipgloss.Center)
+	centerStyle = lipgloss.NewStyle().
 		Width(programWidth).
-		Height(10).
+		Height(programHeight).
 		Align(lipgloss.Center, lipgloss.Center)
 
 	// Login

@@ -74,9 +74,9 @@ func (m model) View() string {
 	var s string
 	if m.ProgramState == stateLogin {
 		if m.LoginState == stateEmail {
-			s += programStyle.Render(lipgloss.JoinVertical(lipgloss.Center, bannerStyle.Render(fmt.Sprintf("\n\n%s\n\nLogin", banner)), lipgloss.JoinVertical(lipgloss.Center, focusedSignInStyle.Render(m.EmailTextArea.View()), unfocusedSignInStyle.Render(m.PasswordTextArea.View()))))
+			s += programStyle.Render(centerStyle.Render(lipgloss.JoinVertical(lipgloss.Center, bannerStyle.Render(fmt.Sprintf("%s\n\nLogin", banner)), lipgloss.JoinVertical(lipgloss.Center, focusedSignInStyle.Render(m.EmailTextArea.View()), unfocusedSignInStyle.Render(m.PasswordTextArea.View())))))
 		} else if m.LoginState == statePassword {
-			s += programStyle.Render(lipgloss.JoinVertical(lipgloss.Center, bannerStyle.Render(fmt.Sprintf("\n\n%s\n\nLogin", banner)), lipgloss.JoinVertical(lipgloss.Center, unfocusedSignInStyle.Render(m.EmailTextArea.View()), focusedSignInStyle.Render(m.PasswordTextArea.View()))))
+			s += programStyle.Render(centerStyle.Render(lipgloss.JoinVertical(lipgloss.Center, bannerStyle.Render(fmt.Sprintf("%s\n\nLogin", banner)), lipgloss.JoinVertical(lipgloss.Center, unfocusedSignInStyle.Render(m.EmailTextArea.View()), focusedSignInStyle.Render(m.PasswordTextArea.View())))))
 		}
 	}
 	return s
