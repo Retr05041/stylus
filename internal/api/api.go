@@ -2,10 +2,9 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"github.com/machinebox/graphql"
-	"log"
 )
+
 
 type Session struct {
 	Login struct {
@@ -17,7 +16,7 @@ type Session struct {
 	} `json:"login"`
 }
 
-func Init(email string, password string) {
+func Init(email string, password string) (string, error) {
 	client := graphql.NewClient("https://api.codesociety.xyz/api")
 
 	loginReq := graphql.NewRequest(`
@@ -38,13 +37,7 @@ func Init(email string, password string) {
 	ctx := context.Background()
 
 	if err := client.Run(ctx, loginReq, &loginResp); err != nil {
-		log.Fatal(err)
+		return "",err
 	} 
-
-	// Access and print the username
-	if loginResp.Login.User.Username != "" {
-		fmt.Println("Logged in as " + loginResp.Login.User.Username)
-	} else {
-		fmt.Println("Username field not found in response.")
-	}
+	return "successfully logged in as " + loginResp.Login.User.Username, nil
 }

@@ -3,8 +3,7 @@ package tui
 import (
 	"fmt"
 	"log"
-	"net/http"
-	"time"
+	"stylus/internal/api"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -16,25 +15,25 @@ const url = "https://codesociety.xyz/"
 // GraphQL Docs: https://graphql.org/learn/
 
 type model struct {
-	status int
+	loginResp string
 	err    error
 }
 
-type statusMsg int
+type loginMsg string
 
 type errMsg struct{ error }
 
 func (e errMsg) Error() string { return e.error.Error() }
 
 func Start() {
-	p := tea.NewProgram(model{})
+	p := tea.NewProgram(model{}, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	return checkServer
+	return login
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -47,8 +46,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-	case statusMsg:
-		m.status = int(msg)
+	case loginMsg:
+		m.loginResp = string(msg)
 		return m, tea.Quit
 
 	case errMsg:
@@ -61,24 +60,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	s := fmt.Sprintf("Checking %s...", url)
+	s := fmt.Sprintf("Logging in...")
 	if m.err != nil {
 		s += fmt.Sprintf("something went wrong: %s", m.err)
-	} else if m.status != 0 {
-		s += fmt.Sprintf("%d %s", m.status, http.StatusText(m.status))
+	} else {
+		s += fmt.Sprintf("%s", m.loginResp)
 	}
 	return s + "\n"
 }
 
-func checkServer() tea.Msg {
-	c := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-	res, err := c.Get(url)
-	if err != nil {
+func login() tea.Msg {
+	loginResp, err := api.Init("", "")
+	if  err != nil {
 		return errMsg{err}
-	}
-	defer res.Body.Close() // nolint:errcheck
-
-	return statusMsg(res.StatusCode)
+	}	
+	return loginMsg(loginResp)
 }
