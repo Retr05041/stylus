@@ -16,7 +16,7 @@ import (
 // GraphQL Docs: https://graphql.org/learn/
 
 func Start() {
-	p := tea.NewProgram(newModel(), tea.WithAltScreen())
+	p := tea.NewProgram(InitModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
@@ -35,6 +35,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "esc":
 			return m, tea.Quit
+		case "tab":
+			if m.ProgramState == stateLogin {
+				if m.LoginState == stateEmail {
+					m.LoginState = statePassword	
+				} else {
+					m.LoginState = stateEmail
+				}
+			}
+		}
+		switch m.ProgramState {
+		case stateLogin:
+			switch m.LoginState {
+			case stateEmail:
+				m.EmailTextArea, cmd = m.EmailTextArea.Update(msg)
+				m.EmailTextArea.Focus()
+				m.PasswordTextArea.Blur()
+				cmds = append(cmds, cmd)
+			case statePassword:
+				m.PasswordTextArea, cmd = m.PasswordTextArea.Update(msg)
+				m.PasswordTextArea.Focus()
+				m.EmailTextArea.Blur()
+				cmds = append(cmds, cmd)
+			}
 		}
 	case errMsg:
 		m.err = msg
@@ -44,15 +67,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	m.EmailTextArea, cmd = m.EmailTextArea.Update(msg)
-	cmds = append(cmds, cmd)
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
 func (m model) View() string {
 	var s string
 	if m.ProgramState == stateLogin {
-		s += programStyle.Render(lipgloss.JoinVertical(lipgloss.Center, bannerStyle.Render(fmt.Sprintf("\n%s\n", banner)), signInStyle.Render(m.EmailTextArea.View())))
+		if m.LoginState == stateEmail {
+			s += programStyle.Render(lipgloss.JoinVertical(lipgloss.Center, bannerStyle.Render(fmt.Sprintf("\n\n%s\n\nLogin", banner)), lipgloss.JoinVertical(lipgloss.Center, focusedSignInStyle.Render(m.EmailTextArea.View()), unfocusedSignInStyle.Render(m.PasswordTextArea.View()))))
+		} else if m.LoginState == statePassword {
+			s += programStyle.Render(lipgloss.JoinVertical(lipgloss.Center, bannerStyle.Render(fmt.Sprintf("\n\n%s\n\nLogin", banner)), lipgloss.JoinVertical(lipgloss.Center, unfocusedSignInStyle.Render(m.EmailTextArea.View()), focusedSignInStyle.Render(m.PasswordTextArea.View()))))
+		}
 	}
 	return s
 }

@@ -4,6 +4,8 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
+	"golang.org/x/term"
+	"log"
 )
 
 // Custom types
@@ -16,32 +18,24 @@ func (e errMsg) Error() string { return e.error.Error() }
 
 const (
 	stateLogin programState = iota
+
+	stateEmail loginState = iota
+	statePassword
 )
 
 var (
-	programWidth  = 100
-	programHeight = 40
+	programWidth  int // 100
+	programHeight int // 40
 	signInWidth   = 30
 	signInHeight  = 1
 
-	programStyle = lipgloss.NewStyle().
-			Width(programWidth).
-			Height(programHeight).
-			Align(lipgloss.Left, lipgloss.Top).
-			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#ffffff"))
+	// Program
+	programStyle lipgloss.Style
+	bannerStyle  lipgloss.Style
 
-	bannerStyle = lipgloss.NewStyle().
-			Width(programWidth).
-			Height(10).
-			Align(lipgloss.Center, lipgloss.Center)
-
-	signInStyle = lipgloss.NewStyle().
-			Width(signInWidth).
-			Height(signInHeight).
-			Align(lipgloss.Left, lipgloss.Center).
-			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#ffffff"))
+	// Login
+	focusedSignInStyle   lipgloss.Style
+	unfocusedSignInStyle lipgloss.Style
 
 	banner = `
    _____ _         _           
@@ -60,13 +54,54 @@ type model struct {
 	ProgramState    programState
 	ProgramViewport viewport.Model
 
-	// Login / Registration
+	// Login
+	LoginState       loginState
 	EmailTextArea    textarea.Model
+	PasswordTextArea textarea.Model
 
 	// Utils
 	err error
 }
 
+// Initialize all global variables then return the model
+func InitModel() model {
+	termWidth, termHeight, err := term.GetSize(0)
+	if err != nil {
+		log.Fatal(err)
+	}
+	programWidth = termWidth-2
+	programHeight = termHeight-2
+
+	// Program
+	programStyle = lipgloss.NewStyle().
+		Width(programWidth).
+		Height(programHeight).
+		Align(lipgloss.Left, lipgloss.Top).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#ffffff"))
+	bannerStyle = lipgloss.NewStyle().
+		Width(programWidth).
+		Height(10).
+		Align(lipgloss.Center, lipgloss.Center)
+
+	// Login
+	focusedSignInStyle = lipgloss.NewStyle().
+		Width(signInWidth).
+		Height(signInHeight).
+		Align(lipgloss.Left, lipgloss.Center).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#69"))
+	unfocusedSignInStyle = lipgloss.NewStyle().
+		Width(signInWidth).
+		Height(signInHeight).
+		Align(lipgloss.Left, lipgloss.Center).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#ffffff"))
+
+	return newModel()
+}
+
+// Creates a model using the global variables provided by InitModel()
 func newModel() model {
 	// Program
 	ProgramVp := viewport.New(programWidth, programHeight)
@@ -74,17 +109,27 @@ func newModel() model {
 	// Login
 	emailTa := textarea.New()
 	emailTa.Placeholder = "Email"
-	emailTa.Focus()
 	emailTa.Prompt = ""
+	emailTa.Focus()
 	emailTa.SetWidth(signInWidth)
 	emailTa.SetHeight(signInHeight)
 	emailTa.ShowLineNumbers = false
 	emailTa.KeyMap.InsertNewline.SetEnabled(false)
 
+	passwordTa := textarea.New()
+	passwordTa.Placeholder = "Password"
+	passwordTa.Prompt = ""
+	passwordTa.SetWidth(signInWidth)
+	passwordTa.SetHeight(signInHeight)
+	passwordTa.ShowLineNumbers = false
+	passwordTa.KeyMap.InsertNewline.SetEnabled(false)
+
 	return model{
 		ProgramViewport:  ProgramVp,
 		ProgramState:     stateLogin,
 		EmailTextArea:    emailTa,
+		PasswordTextArea: passwordTa,
+		LoginState:       stateEmail,
 		err:              nil,
 	}
 }

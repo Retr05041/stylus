@@ -7,6 +7,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.27.0
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/machinebox/graphql v0.2.2
+	golang.org/x/term v0.23.0
 )
 
 require (
