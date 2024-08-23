@@ -7,6 +7,8 @@ import (
 
 
 type Session struct {
+    Client *graphql.Client
+
 	Login struct {
 		Token string `json:"token"`
 		User  struct {
@@ -16,11 +18,15 @@ type Session struct {
 	} `json:"login"`
 }
 
-func Init(email string, password string) (string, error) {
+type Notebook struct {
+
+}
+
+func Login(email string, password string) (*Session, error) {
 	client := graphql.NewClient("https://api.codesociety.xyz/api")
 
 	loginReq := graphql.NewRequest(`
-		mutation ($email: String!, $password: String!) {
+		mutation Login($email: String!, $password: String!) {
 			login(email: $email, password: $password) {
 				token
 				user {
@@ -37,7 +43,12 @@ func Init(email string, password string) (string, error) {
 	ctx := context.Background()
 
 	if err := client.Run(ctx, loginReq, &loginResp); err != nil {
-		return "",err
+		return nil,err
 	} 
-	return "successfully logged in as " + loginResp.Login.User.Username, nil
+    loginResp.Client = client
+	return &loginResp, nil
+}
+
+func (s *Session) GetNotebooks() []Notebook {
+    return []Notebook{}
 }

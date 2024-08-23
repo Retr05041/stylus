@@ -83,7 +83,7 @@ func (m model) View() string {
 }
 
 func login() tea.Msg {
-	loginResp, err := api.Init("", "")
+	loginResp, err := api.Login("", "")
 	if  err != nil {
 		return errMsg{err}
 	}	
