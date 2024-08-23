@@ -5,36 +5,8 @@ import (
 	"github.com/machinebox/graphql"
 )
 
-
-type Session struct {
-    Client *graphql.Client
-
-	Login struct {
-		Token string `json:"token"`
-		User  struct {
-			ID       string `json:"id"`
-			Username string `json:"username"`
-		} `json:"user"`
-	} `json:"login"`
-}
-
-type Notebook struct {
-
-}
-
 func Login(email string, password string) (*Session, error) {
 	client := graphql.NewClient("https://api.codesociety.xyz/api")
-
-	loginReq := graphql.NewRequest(`
-		mutation Login($email: String!, $password: String!) {
-			login(email: $email, password: $password) {
-				token
-				user {
-					id
-					username
-				}
-			}
-		}`)
 
 	loginReq.Var("email", email)
 	loginReq.Var("password", password)
@@ -49,6 +21,6 @@ func Login(email string, password string) (*Session, error) {
 	return &loginResp, nil
 }
 
-func (s *Session) GetNotebooks() []Notebook {
-    return []Notebook{}
+func (s *Session) GetNotebooks() {
+	// Implement 
 }
