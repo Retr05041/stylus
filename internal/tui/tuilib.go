@@ -81,10 +81,12 @@ func InitModel() model {
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#ffffff"))
 	bannerStyle = lipgloss.NewStyle().
-		Align(lipgloss.Center, lipgloss.Center)
-	centerStyle = lipgloss.NewStyle().
 		Width(programWidth).
-		Height(programHeight).
+		Height(programHeight/4).
+		Align(lipgloss.Center, lipgloss.Center)
+    centerStyle = lipgloss.NewStyle().
+		Width(programWidth).
+		Height(programHeight/2).
 		Align(lipgloss.Center, lipgloss.Center)
 
 	// Login
