@@ -81,20 +81,20 @@ func (m *model) SetNotebooks() {
     cachedNotebooks := []list.Item{}  
 
     for i := range m.Session.Notebooks {
-        cachedNotebooks = append(cachedNotebooks, notebook{title: m.Session.Notebooks[i].Title, desc: m.Session.Notebooks[i].Description})
+        cachedNotebooks = append(cachedNotebooks, cachedNotebook{title: m.Session.Notebooks[i].Title, desc: m.Session.Notebooks[i].Description, id: m.Session.Notebooks[i].ID})
     }
 
     m.CachedNotebooks = list.New(cachedNotebooks, list.NewDefaultDelegate(), m.ProgramViewport.Width, m.ProgramViewport.Height/2)
     m.CachedNotebooks.Title = m.Session.Login.User.Username + "'s Notebooks."
 }
 
-type notebook struct {
-	title, desc string
+type cachedNotebook struct {
+	title, desc, id string
 }
 
-func (n notebook) Title() string       { return n.title }
-func (n notebook) Description() string { return n.desc }
-func (n notebook) FilterValue() string { return n.title }
+func (n cachedNotebook) Title() string       { return n.title }
+func (n cachedNotebook) Description() string { return n.desc }
+func (n cachedNotebook) FilterValue() string { return n.title }
 
 // Initialize all global variables then return the model
 func InitModel() model {
