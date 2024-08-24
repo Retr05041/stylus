@@ -42,20 +42,19 @@ type Session struct {
 		} `json:"user"`
 	} `json:"login"`
 
-	Notebooks []Notebook `json:"notebooks"`
+    Notebooks []Notebook `json:"notebooks"`
 }
 
 type Notebook struct {
-	Description string `json:"description"`
-	ID          string `json:"id"`
-	Pages       []Page `json:"pages"`
-	Title       string `json:"title"`
-	UpdatedAt   string `json:"updatedAt"`
+    ID          string `json:"id"`
+    Title       string `json:"title"`
+    Description string `json:"description"`
+    UpdatedAt   string `json:"updatedAt"`
+    Pages []Page `json:"pages"`
 }
-
 type Page struct {
-	ID        string `json:"id"`
-	ParentId  string `json:"parentId"`
-	Title     string `json:"title"`
-	UpdatedAt string `json:"updatedAt"`
+    ID        string `json:"id"`
+    ParentId  string `json:"parentId"`
+    Title     string `json:"title"`
+    UpdatedAt string `json:"updatedAt"`
 }
