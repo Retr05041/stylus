@@ -1,23 +1,28 @@
 package tui
 
 import (
+	"log"
+	"stylus/internal/api"
+
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
-	"log"
 )
 
 // Custom types
 type programState uint
 type loginState uint
 
+// For handling errors in our model
 type errMsg struct{ error }
 
 func (e errMsg) Error() string { return e.error.Error() }
 
+// Global consts for states
 const (
 	stateLogin programState = iota
+	stateNotebooks
 
 	stateEmail loginState = iota
 	statePassword
@@ -52,6 +57,7 @@ var (
 
 type model struct {
 	// Program
+	Session         api.Session
 	ProgramState    programState
 	ProgramViewport viewport.Model
 
@@ -84,7 +90,7 @@ func InitModel() model {
 		Width(programWidth).
 		Height(programHeight/4).
 		Align(lipgloss.Center, lipgloss.Center)
-    centerStyle = lipgloss.NewStyle().
+	centerStyle = lipgloss.NewStyle().
 		Width(programWidth).
 		Height(programHeight/2).
 		Align(lipgloss.Center, lipgloss.Center)

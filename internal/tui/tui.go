@@ -43,6 +43,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.LoginState = stateEmail
 				}
 			}
+        case "enter":
+            if m.ProgramState == stateLogin { // This might need to be changed to be done in a cmd so we can handle errors...
+                session, err := api.Login(m.EmailTextArea.Value(), m.PasswordTextArea.Value())                
+                if err != nil {
+                    log.Fatal(err.Error())
+                    return m, nil
+                }
+                m.Session = *session
+                m.ProgramState = stateNotebooks
+            }
 		}
 		switch m.ProgramState {
 		case stateLogin:
@@ -72,20 +82,32 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	var s string
-	if m.ProgramState == stateLogin {
-		if m.LoginState == stateEmail {
-			s += programStyle.Render(lipgloss.JoinVertical(lipgloss.Center, bannerStyle.Render(fmt.Sprintf("%s\n", banner)), centerStyle.Render(lipgloss.JoinVertical(lipgloss.Center, "Login\n"+focusedSignInStyle.Render(m.EmailTextArea.View()), unfocusedSignInStyle.Render(m.PasswordTextArea.View())))))
-		} else if m.LoginState == statePassword {
-			s += programStyle.Render(lipgloss.JoinVertical(lipgloss.Center, bannerStyle.Render(fmt.Sprintf("%s\n", banner)), centerStyle.Render(lipgloss.JoinVertical(lipgloss.Center, "Login\n"+unfocusedSignInStyle.Render(m.EmailTextArea.View()), focusedSignInStyle.Render(m.PasswordTextArea.View())))))
+	switch m.ProgramState {
+    case stateLogin:
+		switch m.LoginState {
+        case stateEmail:
+            s += programStyle.Render(
+                lipgloss.JoinVertical(
+                    lipgloss.Center, 
+                    bannerStyle.Render(fmt.Sprintf("%s\n", banner)), 
+                    centerStyle.Render(
+                        lipgloss.JoinVertical(
+                            lipgloss.Center, 
+                            "Login\n"+focusedSignInStyle.Render(m.EmailTextArea.View()), 
+                            unfocusedSignInStyle.Render(m.PasswordTextArea.View())))))
+        case statePassword:
+			s += programStyle.Render(
+                lipgloss.JoinVertical(
+                    lipgloss.Center, 
+                    bannerStyle.Render(fmt.Sprintf("%s\n", banner)), 
+                    centerStyle.Render(
+                        lipgloss.JoinVertical(
+                            lipgloss.Center, 
+                            "Login\n"+unfocusedSignInStyle.Render(m.EmailTextArea.View()), 
+                            focusedSignInStyle.Render(m.PasswordTextArea.View())))))
 		}
+    case stateNotebooks:
+        s += programStyle.Render(centerStyle.Render("Signed in... listing Notebooks"))
 	}
 	return s
-}
-
-func login() tea.Msg {
-	loginResp, err := api.Login("", "")
-	if  err != nil {
-		return errMsg{err}
-	}	
-	return loginResp
 }
