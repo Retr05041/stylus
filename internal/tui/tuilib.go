@@ -4,6 +4,7 @@ import (
 	"log"
 	"stylus/internal/api"
 
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
@@ -43,6 +44,9 @@ var (
 	focusedSignInStyle   lipgloss.Style
 	unfocusedSignInStyle lipgloss.Style
 
+    // Notebooks
+    notebookListStyle lipgloss.Style
+
 	banner = `
    _____ _         _           
   / ____| |       | |          
@@ -66,9 +70,31 @@ type model struct {
 	EmailTextArea    textarea.Model
 	PasswordTextArea textarea.Model
 
+	// Notebooks
+	CachedNotebooks list.Model
+
 	// Utils
 	err error
 }
+
+func (m *model) SetNotebooks() {
+    cachedNotebooks := []list.Item{}  
+
+    for i := range m.Session.Notebooks {
+        cachedNotebooks = append(cachedNotebooks, notebook{title: m.Session.Notebooks[i].Title, desc: m.Session.Notebooks[i].Description})
+    }
+
+    m.CachedNotebooks = list.New(cachedNotebooks, list.NewDefaultDelegate(), m.ProgramViewport.Width, m.ProgramViewport.Height/2)
+    m.CachedNotebooks.Title = m.Session.Login.User.Username + "'s Notebooks."
+}
+
+type notebook struct {
+	title, desc string
+}
+
+func (n notebook) Title() string       { return n.title }
+func (n notebook) Description() string { return n.desc }
+func (n notebook) FilterValue() string { return n.title }
 
 // Initialize all global variables then return the model
 func InitModel() model {
@@ -108,6 +134,9 @@ func InitModel() model {
 		Align(lipgloss.Left, lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#ffffff"))
+
+    // Notebooks
+    notebookListStyle = lipgloss.NewStyle().Margin(1,2)
 
 	return newModel()
 }

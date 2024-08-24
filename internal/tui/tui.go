@@ -47,10 +47,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             if m.ProgramState == stateLogin { // This might need to be changed to be done in a cmd so we can handle errors...
                 session, err := api.Login(m.EmailTextArea.Value(), m.PasswordTextArea.Value())                
                 if err != nil {
-                    log.Fatal(err.Error())
+                    //log.Fatal(err.Error())
                     return m, nil
                 }
                 m.Session = *session
+                m.Session.GetNotebooks()
+                m.SetNotebooks()
                 m.ProgramState = stateNotebooks
             }
 		}
@@ -68,7 +70,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.EmailTextArea.Blur()
 				cmds = append(cmds, cmd)
 			}
+        case stateNotebooks:
+            m.CachedNotebooks, cmd = m.CachedNotebooks.Update(msg)
+            cmds = append(cmds, cmd)
 		}
+
 	case errMsg:
 		m.err = msg
 		return m, nil
@@ -107,7 +113,7 @@ func (m model) View() string {
                             focusedSignInStyle.Render(m.PasswordTextArea.View())))))
 		}
     case stateNotebooks:
-        s += programStyle.Render(centerStyle.Render("Signed in... listing Notebooks"))
+        s += programStyle.Render(centerStyle.Render(notebookListStyle.Render(m.CachedNotebooks.View())))
 	}
 	return s
 }
