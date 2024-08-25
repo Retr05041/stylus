@@ -14,6 +14,9 @@ import (
 // Custom types
 type programState uint
 type loginState uint
+type loginSuccessMsg struct{
+    successfulSession *api.Session 
+}
 
 // For handling errors in our model
 type errMsg struct{ error }
@@ -47,6 +50,8 @@ var (
     // Notebooks
     notebookListStyle lipgloss.Style
 
+    // Utils
+    errorStyle lipgloss.Style
 	banner = `
    _____ _         _           
   / ____| |       | |          
@@ -137,6 +142,13 @@ func InitModel() model {
 
     // Notebooks
     notebookListStyle = lipgloss.NewStyle().Margin(1,2)
+
+    // Utils
+    errorStyle = lipgloss.NewStyle().
+        Width(programWidth/12).
+        Height(programHeight/16).
+        Align(lipgloss.Right, lipgloss.Bottom).
+        Foreground(lipgloss.Color("#c90025"))
 
 	return newModel()
 }

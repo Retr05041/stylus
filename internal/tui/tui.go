@@ -3,7 +3,6 @@ package tui
 import (
 	"fmt"
 	"log"
-	"stylus/internal/api"
 
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
@@ -45,15 +44,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
         case "enter":
             if m.ProgramState == stateLogin { // This might need to be changed to be done in a cmd so we can handle errors...
-                session, err := api.Login(m.EmailTextArea.Value(), m.PasswordTextArea.Value())                
-                if err != nil {
-                    //log.Fatal(err.Error())
-                    return m, nil
-                }
-                m.Session = *session
-                m.Session.GetNotebooks()
-                m.SetNotebooks()
-                m.ProgramState = stateNotebooks
+                cmds = append(cmds, LoginToApi(m.EmailTextArea.Value(), m.PasswordTextArea.Value()))
             }
 		}
 		switch m.ProgramState {
@@ -79,6 +70,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg
 		return m, nil
 
+    case loginSuccessMsg:
+        m.Session = *msg.successfulSession
+        m.Session.GetNotebooks()
+        m.SetNotebooks()
+        m.ProgramState = stateNotebooks
+        return m, nil
+
 	default:
 		return m, nil
 	}
@@ -92,6 +90,9 @@ func (m model) View() string {
     case stateLogin:
 		switch m.LoginState {
         case stateEmail:
+            if m.err != nil {
+                s += programStyle.Render(errorStyle.Render(m.err.Error()))
+            }
             s += programStyle.Render(
                 lipgloss.JoinVertical(
                     lipgloss.Center, 
@@ -102,6 +103,9 @@ func (m model) View() string {
                             "Login\n"+focusedSignInStyle.Render(m.EmailTextArea.View()), 
                             unfocusedSignInStyle.Render(m.PasswordTextArea.View())))))
         case statePassword:
+            if m.err != nil {
+                s += programStyle.Render(errorStyle.Render(m.err.Error()))
+            }
 			s += programStyle.Render(
                 lipgloss.JoinVertical(
                     lipgloss.Center, 
