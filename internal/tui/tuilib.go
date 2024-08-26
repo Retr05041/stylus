@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
@@ -25,7 +25,6 @@ var (
 	programWidth  int // 100
 	programHeight int // 40
 	signInWidth   = 30
-	signInHeight  = 1
 
 	// Program
 	programStyle lipgloss.Style
@@ -61,8 +60,8 @@ type model struct {
 
 	// Login
 	LoginState       loginState
-	EmailTextArea    textarea.Model
-	PasswordTextArea textarea.Model
+	EmailTextInput    textinput.Model
+	PasswordTextInput textinput.Model
 
 	// Notebooks
 	CachedNotebooks list.Model
@@ -92,7 +91,6 @@ func (n cachedNotebook) Title() string       { return n.title }
 func (n cachedNotebook) Description() string { return n.desc }
 func (n cachedNotebook) FilterValue() string { return n.title }
 
-
 func (m *model) SetNotebooks() {
 	cachedNotebooks := []list.Item{}
 
@@ -103,7 +101,6 @@ func (m *model) SetNotebooks() {
 	m.CachedNotebooks = list.New(cachedNotebooks, list.NewDefaultDelegate(), m.ProgramViewport.Width, m.ProgramViewport.Height/2)
 	m.CachedNotebooks.Title = m.Session.Login.User.Username + "'s Notebooks."
 }
-
 
 // Initialize all global variables then return the model
 func InitModel() model {
@@ -131,20 +128,13 @@ func InitModel() model {
 		Height(programHeight/4). // Anything using this style gets a block height of half the program window (plus banner makes total block size 3/4) - the login fields use this in the same block
 		Align(lipgloss.Center, lipgloss.Bottom)
 	focusedSignInStyle = lipgloss.NewStyle().
-		Width(signInWidth).
-		Height(signInHeight).
-		//Align(lipgloss.Left, lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#69"))
 	unfocusedSignInStyle = lipgloss.NewStyle().
-		Width(signInWidth).
-		Height(signInHeight).
-		//Align(lipgloss.Left, lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#ffffff"))
 	signInErrorStyle = lipgloss.NewStyle().
 		Width(programWidth).
-		//Height(programHeight/4). // the last 1/4 of the program window
 		Align(lipgloss.Center).
 		Foreground(lipgloss.Color("#ff0000"))
 
@@ -162,29 +152,25 @@ func newModel() model {
 	ProgramVp := viewport.New(programWidth, programHeight)
 
 	// Login
-	emailTa := textarea.New()
-	emailTa.Placeholder = "Email"
-	emailTa.Prompt = ""
-	emailTa.Focus()
-	emailTa.SetWidth(signInWidth)
-	emailTa.SetHeight(signInHeight)
-	emailTa.ShowLineNumbers = false
-	emailTa.KeyMap.InsertNewline.SetEnabled(false)
+	emailTi := textinput.New()
+	emailTi.Placeholder = "Email"
+	emailTi.Prompt = ""
+	emailTi.Focus()
+	emailTi.Width = signInWidth
 
-	passwordTa := textarea.New()
-	passwordTa.Placeholder = "Password"
-	passwordTa.Prompt = ""
-	passwordTa.SetWidth(signInWidth)
-	passwordTa.SetHeight(signInHeight)
-	passwordTa.ShowLineNumbers = false
-	passwordTa.KeyMap.InsertNewline.SetEnabled(false)
+	passwordTi := textinput.New()
+	passwordTi.Placeholder = "Password"
+	passwordTi.Prompt = ""
+	passwordTi.Width = signInWidth
+	passwordTi.EchoMode = textinput.EchoPassword
+	passwordTi.EchoCharacter = '*'
 
 	return model{
-		ProgramViewport:  ProgramVp,
-		ProgramState:     stateLogin,
-		EmailTextArea:    emailTa,
-		PasswordTextArea: passwordTa,
-		LoginState:       stateEmail,
-		err:              nil,
+		ProgramViewport:   ProgramVp,
+		ProgramState:      stateLogin,
+		EmailTextInput:    emailTi,
+		PasswordTextInput: passwordTi,
+		LoginState:        stateEmail,
+		err:               nil,
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -23,7 +23,7 @@ func Start() {
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(textarea.Blink)
+	return tea.Batch(textinput.Blink)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -45,21 +45,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "enter":
 			if m.ProgramState == stateLogin { // This might need to be changed to be done in a cmd so we can handle errors...
-				cmds = append(cmds, LoginToApi(m.EmailTextArea.Value(), m.PasswordTextArea.Value()))
+				cmds = append(cmds, LoginToApi(m.EmailTextInput.Value(), m.PasswordTextInput.Value()))
 			}
 		}
 		switch m.ProgramState {
 		case stateLogin:
 			switch m.LoginState {
 			case stateEmail:
-				m.EmailTextArea, cmd = m.EmailTextArea.Update(msg)
-				m.EmailTextArea.Focus()
-				m.PasswordTextArea.Blur()
+				m.EmailTextInput, cmd = m.EmailTextInput.Update(msg)
+				m.EmailTextInput.Focus()
+				m.PasswordTextInput.Blur()
 				cmds = append(cmds, cmd)
 			case statePassword:
-				m.PasswordTextArea, cmd = m.PasswordTextArea.Update(msg)
-				m.PasswordTextArea.Focus()
-				m.EmailTextArea.Blur()
+				m.PasswordTextInput, cmd = m.PasswordTextInput.Update(msg)
+				m.PasswordTextInput.Focus()
+				m.EmailTextInput.Blur()
 				cmds = append(cmds, cmd)
 			}
 		case stateNotebooks:
@@ -101,8 +101,8 @@ func (m model) View() string {
 					centerSignInStyle.Render(
 						lipgloss.JoinVertical(
 							lipgloss.Center,
-							"Login\n"+focusedSignInStyle.Render(m.EmailTextArea.View()),
-							unfocusedSignInStyle.Render(m.PasswordTextArea.View()))))
+							"Login\n"+focusedSignInStyle.Render(m.EmailTextInput.View()),
+							unfocusedSignInStyle.Render(m.PasswordTextInput.View()))))
 		case statePassword:
 			programContent += lipgloss.JoinVertical(
 					lipgloss.Center,
@@ -110,8 +110,8 @@ func (m model) View() string {
 					centerSignInStyle.Render(
 						lipgloss.JoinVertical(
 							lipgloss.Center,
-							"Login\n"+unfocusedSignInStyle.Render(m.EmailTextArea.View()),
-							focusedSignInStyle.Render(m.PasswordTextArea.View()))))
+							"Login\n"+unfocusedSignInStyle.Render(m.EmailTextInput.View()),
+							focusedSignInStyle.Render(m.PasswordTextInput.View()))))
 		}
 		if m.err != nil {
 			duration := time.Since(m.errNotificationTime) 
