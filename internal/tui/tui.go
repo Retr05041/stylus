@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
@@ -37,15 +38,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "tab":
 			if m.ProgramState == stateLogin {
 				if m.LoginState == stateEmail {
-					m.LoginState = statePassword	
+					m.LoginState = statePassword
 				} else {
 					m.LoginState = stateEmail
 				}
 			}
-        case "enter":
-            if m.ProgramState == stateLogin { // This might need to be changed to be done in a cmd so we can handle errors...
-                cmds = append(cmds, LoginToApi(m.EmailTextArea.Value(), m.PasswordTextArea.Value()))
-            }
+		case "enter":
+			if m.ProgramState == stateLogin { // This might need to be changed to be done in a cmd so we can handle errors...
+				cmds = append(cmds, LoginToApi(m.EmailTextArea.Value(), m.PasswordTextArea.Value()))
+			}
 		}
 		switch m.ProgramState {
 		case stateLogin:
@@ -61,63 +62,67 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.EmailTextArea.Blur()
 				cmds = append(cmds, cmd)
 			}
-        case stateNotebooks:
-            m.CachedNotebooks, cmd = m.CachedNotebooks.Update(msg)
-            cmds = append(cmds, cmd)
+		case stateNotebooks:
+			m.CachedNotebooks, cmd = m.CachedNotebooks.Update(msg)
+			cmds = append(cmds, cmd)
 		}
 
 	case errMsg:
 		m.err = msg
+		m.errNotificationTime = time.Now()
 		return m, nil
 
-    case loginSuccessMsg:
-        m.Session = *msg.successfulSession
-        m.Session.GetNotebooks()
-        m.SetNotebooks()
-        m.ProgramState = stateNotebooks
-        return m, nil
+	case loginSuccessMsg:
+		m.Session = *msg.successfulSession
+		m.Session.GetNotebooks()
+		m.SetNotebooks()
+		m.ProgramState = stateNotebooks
+		return m, nil
 
 	default:
 		return m, nil
 	}
 
+	if m.err != nil && time.Since(m.errNotificationTime) > 3*time.Second {
+		m.err = nil
+	}
 	return m, tea.Batch(cmds...)
 }
 
 func (m model) View() string {
-	var s string
+	var programContent string
 	switch m.ProgramState {
-    case stateLogin:
+	case stateLogin:
 		switch m.LoginState {
-        case stateEmail:
-            if m.err != nil {
-                s += programStyle.Render(errorStyle.Render(m.err.Error()))
-            }
-            s += programStyle.Render(
-                lipgloss.JoinVertical(
-                    lipgloss.Center, 
-                    bannerStyle.Render(fmt.Sprintf("%s\n", banner)), 
-                    centerStyle.Render(
-                        lipgloss.JoinVertical(
-                            lipgloss.Center, 
-                            "Login\n"+focusedSignInStyle.Render(m.EmailTextArea.View()), 
-                            unfocusedSignInStyle.Render(m.PasswordTextArea.View())))))
-        case statePassword:
-            if m.err != nil {
-                s += programStyle.Render(errorStyle.Render(m.err.Error()))
-            }
-			s += programStyle.Render(
-                lipgloss.JoinVertical(
-                    lipgloss.Center, 
-                    bannerStyle.Render(fmt.Sprintf("%s\n", banner)), 
-                    centerStyle.Render(
-                        lipgloss.JoinVertical(
-                            lipgloss.Center, 
-                            "Login\n"+unfocusedSignInStyle.Render(m.EmailTextArea.View()), 
-                            focusedSignInStyle.Render(m.PasswordTextArea.View())))))
+		case stateEmail:
+			programContent += lipgloss.JoinVertical(
+					lipgloss.Center,
+					headerBannerStyle.Render(fmt.Sprintf("%s\n", banner)),
+					centerSignInStyle.Render(
+						lipgloss.JoinVertical(
+							lipgloss.Center,
+							"Login\n"+focusedSignInStyle.Render(m.EmailTextArea.View()),
+							unfocusedSignInStyle.Render(m.PasswordTextArea.View()))))
+		case statePassword:
+			programContent += lipgloss.JoinVertical(
+					lipgloss.Center,
+					headerBannerStyle.Render(fmt.Sprintf("%s\n", banner)),
+					centerSignInStyle.Render(
+						lipgloss.JoinVertical(
+							lipgloss.Center,
+							"Login\n"+unfocusedSignInStyle.Render(m.EmailTextArea.View()),
+							focusedSignInStyle.Render(m.PasswordTextArea.View()))))
 		}
-    case stateNotebooks:
-        s += programStyle.Render(centerStyle.Render(notebookListStyle.Render(m.CachedNotebooks.View())))
+		if m.err != nil {
+			duration := time.Since(m.errNotificationTime) 
+			if duration < 3*time.Second {
+				programContent += "\n" + signInErrorStyle.Render("Error: " + m.err.Error())
+			}
+		}
+	case stateNotebooks:
+		programContent += centerSignInStyle.Render(notebookListStyle.Render(m.CachedNotebooks.View()))
 	}
-	return s
+
+
+	return programStyle.Render(programContent)
 }

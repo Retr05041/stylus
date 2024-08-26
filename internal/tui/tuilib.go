@@ -3,6 +3,7 @@ package tui
 import (
 	"log"
 	"stylus/internal/api"
+	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textarea"
@@ -10,18 +11,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
 )
-
-// Custom types
-type programState uint
-type loginState uint
-type loginSuccessMsg struct{
-    successfulSession *api.Session 
-}
-
-// For handling errors in our model
-type errMsg struct{ error }
-
-func (e errMsg) Error() string { return e.error.Error() }
 
 // Global consts for states
 const (
@@ -40,18 +29,18 @@ var (
 
 	// Program
 	programStyle lipgloss.Style
-	bannerStyle  lipgloss.Style
-	centerStyle  lipgloss.Style
 
 	// Login
+	headerBannerStyle    lipgloss.Style
+	centerSignInStyle    lipgloss.Style
 	focusedSignInStyle   lipgloss.Style
 	unfocusedSignInStyle lipgloss.Style
+	signInErrorStyle     lipgloss.Style
 
-    // Notebooks
-    notebookListStyle lipgloss.Style
+	// Notebooks
+	notebookListStyle lipgloss.Style
 
-    // Utils
-    errorStyle lipgloss.Style
+	// Utils
 	banner = `
    _____ _         _           
   / ____| |       | |          
@@ -79,19 +68,21 @@ type model struct {
 	CachedNotebooks list.Model
 
 	// Utils
-	err error
+	err                 error
+	errNotificationTime time.Time
 }
 
-func (m *model) SetNotebooks() {
-    cachedNotebooks := []list.Item{}  
-
-    for i := range m.Session.Notebooks {
-        cachedNotebooks = append(cachedNotebooks, cachedNotebook{title: m.Session.Notebooks[i].Title, desc: m.Session.Notebooks[i].Description, id: m.Session.Notebooks[i].ID})
-    }
-
-    m.CachedNotebooks = list.New(cachedNotebooks, list.NewDefaultDelegate(), m.ProgramViewport.Width, m.ProgramViewport.Height/2)
-    m.CachedNotebooks.Title = m.Session.Login.User.Username + "'s Notebooks."
+// Custom types
+type programState uint
+type loginState uint
+type loginSuccessMsg struct {
+	successfulSession *api.Session
 }
+
+// For handling errors in our model
+type errMsg struct{ error }
+
+func (e errMsg) Error() string { return e.error.Error() }
 
 type cachedNotebook struct {
 	title, desc, id string
@@ -100,6 +91,19 @@ type cachedNotebook struct {
 func (n cachedNotebook) Title() string       { return n.title }
 func (n cachedNotebook) Description() string { return n.desc }
 func (n cachedNotebook) FilterValue() string { return n.title }
+
+
+func (m *model) SetNotebooks() {
+	cachedNotebooks := []list.Item{}
+
+	for i := range m.Session.Notebooks {
+		cachedNotebooks = append(cachedNotebooks, cachedNotebook{title: m.Session.Notebooks[i].Title, desc: m.Session.Notebooks[i].Description, id: m.Session.Notebooks[i].ID})
+	}
+
+	m.CachedNotebooks = list.New(cachedNotebooks, list.NewDefaultDelegate(), m.ProgramViewport.Width, m.ProgramViewport.Height/2)
+	m.CachedNotebooks.Title = m.Session.Login.User.Username + "'s Notebooks."
+}
+
 
 // Initialize all global variables then return the model
 func InitModel() model {
@@ -114,41 +118,40 @@ func InitModel() model {
 	programStyle = lipgloss.NewStyle().
 		Width(programWidth).
 		Height(programHeight).
-		Align(lipgloss.Left, lipgloss.Top).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#ffffff"))
-	bannerStyle = lipgloss.NewStyle().
-		Width(programWidth).
-		Height(programHeight/4).
-		Align(lipgloss.Center, lipgloss.Center)
-	centerStyle = lipgloss.NewStyle().
-		Width(programWidth).
-		Height(programHeight/2).
-		Align(lipgloss.Center, lipgloss.Center)
 
-	// Login
+	// Sign In (Login/Register)
+	headerBannerStyle = lipgloss.NewStyle().
+		Width(programWidth).
+		Height(programHeight/4). // Banner block takes up 1/4 of the program window
+		Align(lipgloss.Center, lipgloss.Center)
+	centerSignInStyle = lipgloss.NewStyle().
+		Width(programWidth).
+		Height(programHeight/4). // Anything using this style gets a block height of half the program window (plus banner makes total block size 3/4) - the login fields use this in the same block
+		Align(lipgloss.Center, lipgloss.Bottom)
 	focusedSignInStyle = lipgloss.NewStyle().
 		Width(signInWidth).
 		Height(signInHeight).
-		Align(lipgloss.Left, lipgloss.Center).
+		//Align(lipgloss.Left, lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#69"))
 	unfocusedSignInStyle = lipgloss.NewStyle().
 		Width(signInWidth).
 		Height(signInHeight).
-		Align(lipgloss.Left, lipgloss.Center).
+		//Align(lipgloss.Left, lipgloss.Center).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#ffffff"))
+	signInErrorStyle = lipgloss.NewStyle().
+		Width(programWidth).
+		//Height(programHeight/4). // the last 1/4 of the program window
+		Align(lipgloss.Center).
+		Foreground(lipgloss.Color("#ff0000"))
 
-    // Notebooks
-    notebookListStyle = lipgloss.NewStyle().Margin(1,2)
+	// Notebooks
+	notebookListStyle = lipgloss.NewStyle().Margin(1, 2)
 
-    // Utils
-    errorStyle = lipgloss.NewStyle().
-        Width(programWidth/12).
-        Height(programHeight/16).
-        Align(lipgloss.Right, lipgloss.Bottom).
-        Foreground(lipgloss.Color("#c90025"))
+	// Utils
 
 	return newModel()
 }
