@@ -16,6 +16,7 @@ import (
 const (
 	stateLogin programState = iota
 	stateNotebooks
+	statePages
 
 	stateEmail loginState = iota
 	statePassword
@@ -38,6 +39,7 @@ var (
 
 	// Notebooks
 	notebookListStyle lipgloss.Style
+	pageListStyle     lipgloss.Style
 
 	// Utils
 	banner = `
@@ -59,12 +61,14 @@ type model struct {
 	ProgramViewport viewport.Model
 
 	// Login
-	LoginState       loginState
+	LoginState        loginState
 	EmailTextInput    textinput.Model
 	PasswordTextInput textinput.Model
 
-	// Notebooks
-	CachedNotebooks list.Model
+	// Notebooks + Pages
+	CachedNotebooks    list.Model
+	SelectedNotebookID string
+	CachedPages        list.Model
 
 	// Utils
 	err                 error
@@ -83,6 +87,7 @@ type errMsg struct{ error }
 
 func (e errMsg) Error() string { return e.error.Error() }
 
+// Lists for Cached Notebooks and Pages
 type cachedNotebook struct {
 	title, desc, id string
 }
@@ -90,6 +95,14 @@ type cachedNotebook struct {
 func (n cachedNotebook) Title() string       { return n.title }
 func (n cachedNotebook) Description() string { return n.desc }
 func (n cachedNotebook) FilterValue() string { return n.title }
+
+type cachedPage struct {
+	title, id, updatedAt string
+}
+
+func (p cachedPage) Title() string       { return p.title }
+func (p cachedPage) Description() string { return p.updatedAt }
+func (p cachedPage) FilterValue() string { return p.id }
 
 func (m *model) SetNotebooks() {
 	cachedNotebooks := []list.Item{}
@@ -102,6 +115,25 @@ func (m *model) SetNotebooks() {
 	m.CachedNotebooks.Title = m.Session.Login.User.Username + "'s Notebooks."
 	m.CachedNotebooks.SetShowHelp(false)
 	m.CachedNotebooks.DisableQuitKeybindings()
+}
+
+func (m *model) SetPages() {
+	cachedPages := []list.Item{}
+	var chosenNotebook api.Notebook
+
+	for notebookIndex := range m.Session.Notebooks {
+		if m.Session.Notebooks[notebookIndex].ID == m.SelectedNotebookID {
+			chosenNotebook = m.Session.Notebooks[notebookIndex]
+			for _, page := range m.Session.Notebooks[notebookIndex].Pages {
+				cachedPages = append(cachedPages, cachedPage{title: page.Title, id: page.ID, updatedAt: page.UpdatedAt})
+			}
+		}
+	}
+
+	m.CachedPages = list.New(cachedPages, list.NewDefaultDelegate(), m.ProgramViewport.Width/2, m.ProgramViewport.Height/2)
+	m.CachedPages.Title = chosenNotebook.Title
+	m.CachedPages.SetShowHelp(false)
+	m.CachedPages.DisableQuitKeybindings()
 }
 
 // Initialize all global variables then return the model
@@ -140,13 +172,17 @@ func InitModel() model {
 		Align(lipgloss.Center).
 		Foreground(lipgloss.Color("#ff0000"))
 
-	// Notebooks
+	// Notebooks + Pages
 	notebookListStyle = lipgloss.NewStyle().
 		Width(programWidth).
 		Height(programHeight-2).
 		Align(lipgloss.Center, lipgloss.Center).
 		Margin(1, 2)
-
+	pageListStyle = lipgloss.NewStyle().
+		Width(programWidth).
+		Height(programHeight-2).
+		Align(lipgloss.Left, lipgloss.Top).
+		Margin(1, 2)
 
 	// Utils
 

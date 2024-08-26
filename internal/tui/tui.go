@@ -34,7 +34,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":
-			return m, tea.Quit
+			switch m.ProgramState {
+			case stateLogin:
+				return m, tea.Quit
+			case stateNotebooks:
+				m.ProgramState = stateLogin
+			case statePages:
+				m.ProgramState = stateNotebooks
+			}
 		case "tab":
 			if m.ProgramState == stateLogin {
 				if m.LoginState == stateEmail {
@@ -44,8 +51,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case "enter":
-			if m.ProgramState == stateLogin { // This might need to be changed to be done in a cmd so we can handle errors...
+			switch m.ProgramState {
+			case stateLogin:
 				cmds = append(cmds, LoginToApi(m.EmailTextInput.Value(), m.PasswordTextInput.Value()))
+			case stateNotebooks:
+				selectedNotebook, ok := m.CachedNotebooks.SelectedItem().(cachedNotebook)
+				if ok {
+					m.SelectedNotebookID = selectedNotebook.id
+					m.SetPages()
+					m.ProgramState = statePages
+				}
 			}
 		}
 		switch m.ProgramState {
@@ -65,6 +80,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case stateNotebooks:
 			m.CachedNotebooks, cmd = m.CachedNotebooks.Update(msg)
 			cmds = append(cmds, cmd)
+		case statePages:
+			m.CachedPages, cmd = m.CachedPages.Update(msg)
+			cmds = append(cmds, cmd)
 		}
 
 	case errMsg:
@@ -76,6 +94,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Session = *msg.successfulSession
 		m.Session.GetNotebooks()
 		m.SetNotebooks()
+		m.EmailTextInput.Reset()
+		m.PasswordTextInput.Reset()
 		m.ProgramState = stateNotebooks
 		return m, nil
 
@@ -96,33 +116,34 @@ func (m model) View() string {
 		switch m.LoginState {
 		case stateEmail:
 			programContent += lipgloss.JoinVertical(
-					lipgloss.Center,
-					headerBannerStyle.Render(fmt.Sprintf("%s\n", banner)),
-					centerSignInStyle.Render(
-						lipgloss.JoinVertical(
-							lipgloss.Center,
-							"Login\n"+focusedSignInStyle.Render(m.EmailTextInput.View()),
-							unfocusedSignInStyle.Render(m.PasswordTextInput.View()))))
+				lipgloss.Center,
+				headerBannerStyle.Render(fmt.Sprintf("%s\n", banner)),
+				centerSignInStyle.Render(
+					lipgloss.JoinVertical(
+						lipgloss.Center,
+						"Login\n"+focusedSignInStyle.Render(m.EmailTextInput.View()),
+						unfocusedSignInStyle.Render(m.PasswordTextInput.View()))))
 		case statePassword:
 			programContent += lipgloss.JoinVertical(
-					lipgloss.Center,
-					headerBannerStyle.Render(fmt.Sprintf("%s\n", banner)),
-					centerSignInStyle.Render(
-						lipgloss.JoinVertical(
-							lipgloss.Center,
-							"Login\n"+unfocusedSignInStyle.Render(m.EmailTextInput.View()),
-							focusedSignInStyle.Render(m.PasswordTextInput.View()))))
+				lipgloss.Center,
+				headerBannerStyle.Render(fmt.Sprintf("%s\n", banner)),
+				centerSignInStyle.Render(
+					lipgloss.JoinVertical(
+						lipgloss.Center,
+						"Login\n"+unfocusedSignInStyle.Render(m.EmailTextInput.View()),
+						focusedSignInStyle.Render(m.PasswordTextInput.View()))))
 		}
 		if m.err != nil {
-			duration := time.Since(m.errNotificationTime) 
+			duration := time.Since(m.errNotificationTime)
 			if duration < 3*time.Second {
-				programContent += "\n" + signInErrorStyle.Render("Error: " + m.err.Error())
+				programContent += "\n" + signInErrorStyle.Render("Error: "+m.err.Error())
 			}
 		}
 	case stateNotebooks:
 		programContent += notebookListStyle.Render(m.CachedNotebooks.View())
+	case statePages:
+		programContent += pageListStyle.Render(m.CachedPages.View())
 	}
-
 
 	return programStyle.Render(programContent)
 }
