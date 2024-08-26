@@ -120,7 +120,7 @@ func (m model) View() string {
 			}
 		}
 	case stateNotebooks:
-		programContent += centerSignInStyle.Render(notebookListStyle.Render(m.CachedNotebooks.View()))
+		programContent += notebookListStyle.Render(m.CachedNotebooks.View())
 	}
 
 
