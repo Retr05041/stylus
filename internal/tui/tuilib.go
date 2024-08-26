@@ -98,7 +98,7 @@ func (m *model) SetNotebooks() {
 		cachedNotebooks = append(cachedNotebooks, cachedNotebook{title: m.Session.Notebooks[i].Title, desc: m.Session.Notebooks[i].Description, id: m.Session.Notebooks[i].ID})
 	}
 
-	m.CachedNotebooks = list.New(cachedNotebooks, list.NewDefaultDelegate(), m.ProgramViewport.Width, m.ProgramViewport.Height-2)
+	m.CachedNotebooks = list.New(cachedNotebooks, list.NewDefaultDelegate(), m.ProgramViewport.Width/2, m.ProgramViewport.Height/2)
 	m.CachedNotebooks.Title = m.Session.Login.User.Username + "'s Notebooks."
 	m.CachedNotebooks.SetShowHelp(false)
 	m.CachedNotebooks.DisableQuitKeybindings()
@@ -142,6 +142,9 @@ func InitModel() model {
 
 	// Notebooks
 	notebookListStyle = lipgloss.NewStyle().
+		Width(programWidth).
+		Height(programHeight-2).
+		Align(lipgloss.Center, lipgloss.Center).
 		Margin(1, 2)
 
 
