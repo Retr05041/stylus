@@ -33,7 +33,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "esc":
+		case "esc":
 			switch m.ProgramState {
 			case stateLogin:
 				return m, tea.Quit
@@ -46,6 +46,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case statePage:
 					m.PageState = statePageList
 					m.EditablePage.Blur()
+				case statePageRender:
+					m.PageState = statePage
+					m.EditablePage.Focus()
+				}
+			}
+		case "ctrl+c":
+			if m.ProgramState == statePages {
+				if m.PageState == statePage {
+					m.RenderPage()
+					m.PageState = statePageRender
+				} else {
+					m.PageState = statePage
 				}
 			}
 		case "tab":
@@ -56,13 +68,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.LoginState = statePassword
 				case statePassword:
 					m.LoginState = stateEmail
-				}
-			case statePages:
-				switch m.PageState {
-				case statePageList:
-					m.PageState = statePage
-				case statePage:
-					m.PageState = statePageList
 				}
 			}
 		case "enter":
@@ -172,7 +177,12 @@ func (m model) View() string {
 	case stateNotebooks:
 		programContent += notebookListStyle.Render(m.CachedNotebooks.View())
 	case statePages:
-		programContent += lipgloss.JoinHorizontal(lipgloss.Center, pageListStyle.Render(m.CachedPages.View()), pageStyle.Render(m.EditablePage.View()))
+		switch m.PageState {
+		case statePage, statePageList:
+			programContent += lipgloss.JoinHorizontal(lipgloss.Center, pageListStyle.Render(m.CachedPages.View()), pageStyle.Render(m.EditablePage.View()))
+		case statePageRender:
+			programContent += lipgloss.JoinHorizontal(lipgloss.Center, pageListStyle.Render(m.CachedPages.View()), pageStyle.Render(m.RenderedPage.View()))
+		}
 	}
 
 	return programStyle.Render(programContent)

@@ -9,7 +9,8 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
-	//"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/glamour"
+
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
 )
@@ -25,6 +26,7 @@ const (
 
 	statePageList pageState = iota
 	statePage
+	statePageRender
 )
 
 var (
@@ -81,6 +83,7 @@ type model struct {
 	CachedPages    list.Model
 	SelectedPageID string
 	EditablePage   textarea.Model
+	RenderedPage   viewport.Model
 
 	// Utils
 	err                 error
@@ -152,8 +155,8 @@ func (m *model) ListPages() {
 
 	// So we display nothing... once listing is done
 	m.EditablePage = textarea.New()
-	m.EditablePage.SetWidth(programWidth-(programWidth/4)-10)
-	m.EditablePage.SetHeight(programHeight-2)
+	m.EditablePage.SetWidth(programWidth - (programWidth / 4) - 10)
+	m.EditablePage.SetHeight(programHeight - 2)
 }
 
 func (m *model) DisplayEditablePage() {
@@ -166,6 +169,21 @@ func (m *model) DisplayEditablePage() {
 			break
 		}
 	}
+}
+
+func (m *model) RenderPage() {
+	m.RenderedPage = viewport.New(programWidth-(programWidth/4)-10, programHeight-2)
+	r, _ := glamour.NewTermRenderer(
+		glamour.WithAutoStyle())
+
+	for _, page := range m.SelectedNotebook.Pages {
+		if page.ID == m.SelectedPageID {
+			Rstr, _:= r.Render(page.Content)
+			m.RenderedPage.SetContent(Rstr)
+			break
+		}
+	}
+
 }
 
 // Initialize all global variables then return the model
