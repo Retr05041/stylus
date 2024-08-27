@@ -23,8 +23,6 @@ func Login(email string, password string) (*Session, error) {
 
 func (s *Session) GetNotebooks() error {
     notebooksReq.Header.Add("Authorization", "Bearer " + s.Login.Token)    
-    
-    //var notebooksResp Notebooks 
 
     if err := s.Client.Run(context.Background(), notebooksReq, &s); err != nil {
         return err 
