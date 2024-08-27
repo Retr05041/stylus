@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
@@ -24,6 +25,7 @@ const (
 
 	statePageList pagesState = iota
 	statePage
+	stateRenderPage
 )
 
 var (
@@ -79,6 +81,7 @@ type model struct {
 	PageState      pagesState
 	CachedPages    list.Model
 	SelectedPageID string
+	CurrentPage	   textarea.Model
 	RenderedPage   viewport.Model
 
 	// Utils
@@ -148,6 +151,13 @@ func (m *model) SetPages() {
 	m.CachedPages.Title = chosenNotebook.Title
 	m.CachedPages.SetShowHelp(false)
 	m.CachedPages.DisableQuitKeybindings()
+
+	// Set up page renderer and page editor
+
+	m.CurrentPage = textarea.New()
+	m.CurrentPage.Focus()
+	m.CurrentPage.CursorStart()
+	m.CurrentPage.InsertString("")
 	m.RenderedPage = viewport.New(programWidth-(programWidth/4), programHeight-2)
 	m.RenderedPage.SetContent("")
 
@@ -155,6 +165,7 @@ func (m *model) SetPages() {
 
 func (m *model) DisplaySelectedPage() error {
 	var str string
+	var rstr string
 	renderer, err := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),
 		glamour.WithWordWrap(m.RenderedPage.Width),
@@ -166,7 +177,8 @@ func (m *model) DisplaySelectedPage() error {
 
 	for _, page := range m.SelectedNotebook.Pages {
 		if page.ID == m.SelectedPageID {
-			str, err = renderer.Render(page.Content)
+			rstr, err = renderer.Render(page.Content)
+			str = page.Content
 			if err != nil {
 				log.Fatal("Failed to render")
 				return errMsg{err}
@@ -175,7 +187,8 @@ func (m *model) DisplaySelectedPage() error {
 		}
 	}
 
-	m.RenderedPage.SetContent(str)
+	m.RenderedPage.SetContent(rstr)
+	m.CurrentPage.InsertString(str)
 	return nil
 }
 

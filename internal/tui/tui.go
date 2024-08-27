@@ -162,7 +162,7 @@ func (m model) View() string {
 	case stateNotebooks:
 		programContent += notebookListStyle.Render(m.CachedNotebooks.View())
 	case statePages:
-		programContent += lipgloss.JoinHorizontal(lipgloss.Center, pageListStyle.Render(m.CachedPages.View()), pageStyle.Render(m.RenderedPage.View()))
+		programContent += lipgloss.JoinHorizontal(lipgloss.Center, pageListStyle.Render(m.CachedPages.View()), pageStyle.Render(m.CurrentPage.View()))
 	}
 
 	return programStyle.Render(programContent)
