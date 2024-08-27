@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"log"
+	"stylus/internal/api"
 	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -16,7 +17,7 @@ import (
 // GraphQL Docs: https://graphql.org/learn/
 
 func Start() {
-	p := tea.NewProgram(InitModel(), tea.WithAltScreen())
+	p := tea.NewProgram(newModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
@@ -33,88 +34,86 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc":
+		case "esc": // Esc will be out "backspace" button - it will go backwords through the program
 			switch m.ProgramState {
-			case stateLogin:
+			case programStateLogin:
 				return m, tea.Quit
-			case stateNotebooks:
-				m.ProgramState = stateLogin
-			case statePages:
+			case programStateNotebooks:
+				m.ProgramState = programStateLogin
+			case programStatePages:
 				switch m.PageState {
-				case statePageList:
-					m.ProgramState = stateNotebooks
-				case statePage:
-					m.PageState = statePageList
+				case pageStateList:
+					m.ProgramState = programStateNotebooks
+				case pageStatePage:
+					m.PageState = pageStateList
 					m.EditablePage.Blur()
-				case statePageRender:
-					m.PageState = statePage
+				case pageStateRender:
+					m.PageState = pageStatePage
 					m.EditablePage.Focus()
 				}
 			}
 		case "ctrl+c":
-			if m.ProgramState == statePages {
-				if m.PageState == statePage {
+			if m.ProgramState == programStatePages {
+				if m.PageState == pageStatePage {
 					m.SavePageContent()
 					m.RenderPage()
-					m.PageState = statePageRender
-				} else {
-					m.PageState = statePage
-				}
+					m.PageState = pageStateRender
+				} 
 			}
 		case "tab":
 			switch m.ProgramState {
-			case stateLogin:
+			case programStateLogin:
 				switch m.LoginState {
-				case stateEmail:
-					m.LoginState = statePassword
-				case statePassword:
-					m.LoginState = stateEmail
+				case loginStateEmail:
+					m.LoginState = loginStatePassword
+				case loginStatePassword:
+					m.LoginState = loginStateEmail
 				}
 			}
 		case "enter":
 			switch m.ProgramState {
-			case stateLogin:
+			case programStateLogin:
 				cmds = append(cmds, LoginToApi(m.EmailTextInput.Value(), m.PasswordTextInput.Value()))
-			case stateNotebooks:
-				selectedNotebook, ok := m.CachedNotebooks.SelectedItem().(cachedNotebook)
+			case programStateNotebooks:
+				selectedNotebook, ok := m.CachedNotebooks.SelectedItem().(api.Notebook)
 				if ok {
-					m.SelectedNotebookID = selectedNotebook.id
+					m.SelectedNotebook = selectedNotebook
 					m.ListPages()
-					m.ProgramState = statePages
-					m.PageState = statePageList
+					m.ProgramState = programStatePages
+					m.PageState = pageStateList
 				}
-			case statePages:
+			case programStatePages:
 				switch m.PageState {
-				case statePageList:
-					selectedPage, ok := m.CachedPages.SelectedItem().(cachedPage)
+				case pageStateList:
+					selectedPage, ok := m.CachedPages.SelectedItem().(api.Page)
 					if ok {
-						m.SelectedPageID = selectedPage.id
+						m.SelectedPage = selectedPage
 						m.EditablePage.Reset()
 						m.DisplayEditablePage()
-						m.PageState = statePage
+						m.PageState = pageStatePage
 						m.EditablePage.Focus()
 					}
 				}
 			}
 		}
 		switch m.ProgramState {
-		case stateLogin:
+		case programStateLogin:
 			switch m.LoginState {
-			case stateEmail:
+			case loginStateEmail:
 				m.EmailTextInput, cmd = m.EmailTextInput.Update(msg)
 				m.EmailTextInput.Focus()
 				m.PasswordTextInput.Blur()
 				cmds = append(cmds, cmd)
-			case statePassword:
+			case loginStatePassword:
 				m.PasswordTextInput, cmd = m.PasswordTextInput.Update(msg)
 				m.PasswordTextInput.Focus()
 				m.EmailTextInput.Blur()
 				cmds = append(cmds, cmd)
 			}
-		case stateNotebooks:
+		case programStateNotebooks:
 			m.CachedNotebooks, cmd = m.CachedNotebooks.Update(msg)
 			cmds = append(cmds, cmd)
-		case statePages:
+		case programStatePages:
 			m.CachedPages, cmd = m.CachedPages.Update(msg)
 			cmds = append(cmds, cmd)
 			m.EditablePage, cmd = m.EditablePage.Update(msg)
@@ -132,7 +131,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.SetNotebooks()
 		m.EmailTextInput.Reset()
 		m.PasswordTextInput.Reset()
-		m.ProgramState = stateNotebooks
+		m.ProgramState = programStateNotebooks
 		return m, nil
 
 	default:
@@ -148,9 +147,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	var programContent string
 	switch m.ProgramState {
-	case stateLogin:
+	case programStateLogin:
 		switch m.LoginState {
-		case stateEmail:
+		case loginStateEmail:
 			programContent += lipgloss.JoinVertical(
 				lipgloss.Center,
 				headerBannerStyle.Render(fmt.Sprintf("%s\n", banner)),
@@ -159,7 +158,7 @@ func (m model) View() string {
 						lipgloss.Center,
 						"Login\n"+focusedSignInStyle.Render(m.EmailTextInput.View()),
 						unfocusedSignInStyle.Render(m.PasswordTextInput.View()))))
-		case statePassword:
+		case loginStatePassword:
 			programContent += lipgloss.JoinVertical(
 				lipgloss.Center,
 				headerBannerStyle.Render(fmt.Sprintf("%s\n", banner)),
@@ -175,13 +174,13 @@ func (m model) View() string {
 				programContent += "\n" + signInErrorStyle.Render("Error: "+m.err.Error())
 			}
 		}
-	case stateNotebooks:
+	case programStateNotebooks:
 		programContent += notebookListStyle.Render(m.CachedNotebooks.View())
-	case statePages:
+	case programStatePages:
 		switch m.PageState {
-		case statePage, statePageList:
+		case pageStatePage, pageStateList:
 			programContent += lipgloss.JoinHorizontal(lipgloss.Center, pageListStyle.Render(m.CachedPages.View()), pageStyle.Render(m.EditablePage.View()))
-		case statePageRender:
+		case pageStateRender:
 			programContent += lipgloss.JoinHorizontal(lipgloss.Center, pageListStyle.Render(m.CachedPages.View()), pageStyle.Render(m.RenderedPage.View()))
 		}
 	}

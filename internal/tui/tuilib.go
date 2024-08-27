@@ -17,16 +17,16 @@ import (
 
 // Global consts for states
 const (
-	stateLogin programState = iota
-	stateNotebooks
-	statePages
+	programStateLogin programState = iota
+	programStateNotebooks
+	programStatePages
 
-	stateEmail loginState = iota
-	statePassword
+	loginStateEmail loginState = iota
+	loginStatePassword
 
-	statePageList pageState = iota
-	statePage
-	statePageRender
+	pageStateList pageState = iota
+	pageStatePage
+	pageStateRender
 )
 
 var (
@@ -74,16 +74,15 @@ type model struct {
 	PasswordTextInput textinput.Model
 
 	// Notebooks
-	CachedNotebooks    list.Model
-	SelectedNotebookID string
-	SelectedNotebook   api.Notebook
+	CachedNotebooks  list.Model
+	SelectedNotebook api.Notebook
 
 	// Pages
-	PageState      pageState
-	CachedPages    list.Model
-	SelectedPageID string
-	EditablePage   textarea.Model
-	RenderedPage   viewport.Model
+	PageState    pageState
+	CachedPages  list.Model
+	SelectedPage api.Page
+	EditablePage textarea.Model
+	RenderedPage viewport.Model
 
 	// Utils
 	err                 error
@@ -91,40 +90,25 @@ type model struct {
 }
 
 // Custom types
+// States
 type programState uint
 type loginState uint
+type pageState uint
+
+// Tea.msg
 type loginSuccessMsg struct {
 	successfulSession *api.Session
 }
-type pageState uint
-
-// For handling errors in our model
 type errMsg struct{ error }
 
 func (e errMsg) Error() string { return e.error.Error() }
 
-// Lists for Cached Notebooks and Pages
-type cachedNotebook struct {
-	title, desc, id string
-}
-
-func (n cachedNotebook) Title() string       { return n.title }
-func (n cachedNotebook) Description() string { return n.desc }
-func (n cachedNotebook) FilterValue() string { return n.title }
-
-type cachedPage struct {
-	title, id, updatedAt string
-}
-
-func (p cachedPage) Title() string       { return p.title }
-func (p cachedPage) Description() string { return p.updatedAt }
-func (p cachedPage) FilterValue() string { return p.id }
-
+// Given the list of notebooks from the API, set them in the model for use
 func (m *model) SetNotebooks() {
 	cachedNotebooks := []list.Item{}
 
-	for i := range m.Session.Notebooks {
-		cachedNotebooks = append(cachedNotebooks, cachedNotebook{title: m.Session.Notebooks[i].Title, desc: m.Session.Notebooks[i].Description, id: m.Session.Notebooks[i].ID})
+	for _, notebook := range m.Session.Notebooks {
+		cachedNotebooks = append(cachedNotebooks, notebook)
 	}
 
 	m.CachedNotebooks = list.New(cachedNotebooks, list.NewDefaultDelegate(), m.ProgramViewport.Width/2, m.ProgramViewport.Height/2)
@@ -133,23 +117,24 @@ func (m *model) SetNotebooks() {
 	m.CachedNotebooks.DisableQuitKeybindings()
 }
 
+// Given a specified chachedNotebook, cache all the pages that notebook has
 func (m *model) ListPages() {
 	cachedPages := []list.Item{}
 	var chosenNotebook api.Notebook
 
 	for notebookIndex := range m.Session.Notebooks {
-		if m.Session.Notebooks[notebookIndex].ID == m.SelectedNotebookID {
+		if m.Session.Notebooks[notebookIndex].ID == m.SelectedNotebook.ID {
 			chosenNotebook = m.Session.Notebooks[notebookIndex]
 			m.SelectedNotebook = chosenNotebook
 			for _, page := range m.Session.Notebooks[notebookIndex].Pages {
-				cachedPages = append(cachedPages, cachedPage{title: page.Title, id: page.ID, updatedAt: page.UpdatedAt})
+				cachedPages = append(cachedPages, page)
 			}
 			break
 		}
 	}
 
 	m.CachedPages = list.New(cachedPages, list.NewDefaultDelegate(), programWidth/4, programHeight/2)
-	m.CachedPages.Title = chosenNotebook.Title
+	m.CachedPages.Title = chosenNotebook.NotebookTitle
 	m.CachedPages.SetShowHelp(false)
 	m.CachedPages.DisableQuitKeybindings()
 
@@ -159,26 +144,28 @@ func (m *model) ListPages() {
 	m.EditablePage.SetHeight(programHeight - 2)
 }
 
+// Once selected a page to edit, this sets the contents of the textarea
 func (m *model) DisplayEditablePage() {
 	m.EditablePage.CursorStart()
 	m.EditablePage.InsertString("")
 
 	for _, page := range m.SelectedNotebook.Pages {
-		if page.ID == m.SelectedPageID {
+		if page.ID == m.SelectedPage.ID {
 			m.EditablePage.InsertString(page.Content)
 			break
 		}
 	}
 }
 
+// Post page selection, called if you want to render the page in markdown
 func (m *model) RenderPage() {
 	m.RenderedPage = viewport.New(programWidth-(programWidth/4)-10, programHeight-2)
 	r, _ := glamour.NewTermRenderer(
 		glamour.WithAutoStyle())
 
 	for _, page := range m.SelectedNotebook.Pages {
-		if page.ID == m.SelectedPageID {
-			Rstr, _:= r.Render(page.Content)
+		if page.ID == m.SelectedPage.ID {
+			Rstr, _ := r.Render(page.Content)
 			m.RenderedPage.SetContent(Rstr)
 			break
 		}
@@ -186,17 +173,19 @@ func (m *model) RenderPage() {
 
 }
 
+// Sets the selected cached page's contents to that of whats in the textarea - for saving and rendering
 func (m *model) SavePageContent() {
 	for pageIndex, page := range m.SelectedNotebook.Pages {
-		if page.ID == m.SelectedPageID {
+		if page.ID == m.SelectedPage.ID {
 			m.SelectedNotebook.Pages[pageIndex].Content = m.EditablePage.Value()
 			break
 		}
 	}
 }
 
-// Initialize all global variables then return the model
-func InitModel() model {
+// Creates a model
+func newModel() model {
+	// Global Variable Assignment
 	termWidth, termHeight, err := term.GetSize(0)
 	if err != nil {
 		log.Fatal(err)
@@ -204,14 +193,14 @@ func InitModel() model {
 	programWidth = termWidth - 2
 	programHeight = termHeight - 2
 
-	// Program
+	// Program vars
 	programStyle = lipgloss.NewStyle().
 		Width(programWidth).
 		Height(programHeight).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#ffffff"))
 
-	// Sign In (Login/Register)
+	// Sign In (Login/Register) vars
 	headerBannerStyle = lipgloss.NewStyle().
 		Width(programWidth).
 		Height(programHeight/4). // Banner block takes up 1/4 of the program window
@@ -246,11 +235,8 @@ func InitModel() model {
 		Width(programWidth - (programWidth / 4)).
 		Height(programHeight - 2)
 
-	return newModel()
-}
+	// **************************************
 
-// Creates a model using the global variables provided by InitModel()
-func newModel() model {
 	// Program
 	ProgramVp := viewport.New(programWidth, programHeight)
 
@@ -270,10 +256,10 @@ func newModel() model {
 
 	return model{
 		ProgramViewport:   ProgramVp,
-		ProgramState:      stateLogin,
+		ProgramState:      programStateLogin,
 		EmailTextInput:    emailTi,
 		PasswordTextInput: passwordTi,
-		LoginState:        stateEmail,
+		LoginState:        loginStateEmail,
 		err:               nil,
 	}
 }

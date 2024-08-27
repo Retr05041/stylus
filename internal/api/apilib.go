@@ -47,16 +47,24 @@ type Session struct {
 }
 
 type Notebook struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	UpdatedAt   string `json:"updatedAt"`
-	Pages       []Page `json:"pages"`
+	ID                  string `json:"id"`
+	NotebookTitle       string `json:"title"`
+	NotebookDescription string `json:"description"`
+	UpdatedAt           string `json:"updatedAt"`
+	Pages               []Page `json:"pages"`
 }
 type Page struct {
 	ID        string `json:"id"`
 	ParentId  string `json:"parentId"`
-	Title     string `json:"title"`
+	PageTitle string `json:"title"`
 	UpdatedAt string `json:"updatedAt"`
 	Content   string `json:"content"`
 }
+
+func (n Notebook) Title() string       { return n.NotebookTitle }
+func (n Notebook) Description() string { return n.NotebookDescription }
+func (n Notebook) FilterValue() string { return n.ID }
+
+func (p Page) Title() string       { return p.PageTitle }
+func (p Page) Description() string { return p.UpdatedAt }
+func (p Page) FilterValue() string { return p.ID }
