@@ -163,12 +163,7 @@ func (m *model) RenderPage() {
 
 // Sets the selected cached page's contents to that of whats in the textarea - for saving and rendering - since it's just editing the cached pages, leaving the notebook will revert the changes
 func (m *model) SaveCachedPageContent() {
-	for pageIndex, page := range m.SelectedNotebook.Pages {
-		if page.ID == m.SelectedPage.ID {
-			m.SelectedNotebook.Pages[pageIndex].Content = m.EditablePage.Value()
-			break
-		}
-	}
+	m.SelectedPage.Content = m.EditablePage.Value()
 }
 
 // Creates a model
