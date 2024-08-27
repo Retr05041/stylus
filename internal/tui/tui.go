@@ -55,7 +55,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			if m.ProgramState == programStatePages {
 				if m.PageState == pageStatePage {
-					m.SavePageContent()
+					m.SaveCachedPageContent()
 					m.RenderPage()
 					m.PageState = pageStateRender
 				} 

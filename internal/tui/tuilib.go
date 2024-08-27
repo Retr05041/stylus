@@ -82,6 +82,7 @@ type model struct {
 	CachedPages  list.Model
 	SelectedPage api.Page
 	EditablePage textarea.Model
+	Renderer     glamour.TermRenderer
 	RenderedPage viewport.Model
 
 	// Utils
@@ -138,14 +139,11 @@ func (m *model) ListPages() {
 	m.CachedPages.SetShowHelp(false)
 	m.CachedPages.DisableQuitKeybindings()
 
-	// So we display nothing... once listing is done
-	m.EditablePage = textarea.New()
-	m.EditablePage.SetWidth(programWidth - (programWidth / 4) - 10)
-	m.EditablePage.SetHeight(programHeight - 2)
 }
 
 // Once selected a page to edit, this sets the contents of the textarea
 func (m *model) DisplayEditablePage() {
+	m.EditablePage.Reset()
 	m.EditablePage.CursorStart()
 	m.EditablePage.InsertString("")
 
@@ -159,22 +157,12 @@ func (m *model) DisplayEditablePage() {
 
 // Post page selection, called if you want to render the page in markdown
 func (m *model) RenderPage() {
-	m.RenderedPage = viewport.New(programWidth-(programWidth/4)-10, programHeight-2)
-	r, _ := glamour.NewTermRenderer(
-		glamour.WithAutoStyle())
-
-	for _, page := range m.SelectedNotebook.Pages {
-		if page.ID == m.SelectedPage.ID {
-			Rstr, _ := r.Render(page.Content)
-			m.RenderedPage.SetContent(Rstr)
-			break
-		}
-	}
-
+	Rstr, _ := m.Renderer.Render(m.SelectedPage.Content)
+	m.RenderedPage.SetContent(Rstr)
 }
 
-// Sets the selected cached page's contents to that of whats in the textarea - for saving and rendering
-func (m *model) SavePageContent() {
+// Sets the selected cached page's contents to that of whats in the textarea - for saving and rendering - since it's just editing the cached pages, leaving the notebook will revert the changes
+func (m *model) SaveCachedPageContent() {
 	for pageIndex, page := range m.SelectedNotebook.Pages {
 		if page.ID == m.SelectedPage.ID {
 			m.SelectedNotebook.Pages[pageIndex].Content = m.EditablePage.Value()
@@ -254,12 +242,26 @@ func newModel() model {
 	passwordTi.EchoMode = textinput.EchoPassword
 	passwordTi.EchoCharacter = '*'
 
+	// Pages
+	EditPageTa := textarea.New()
+	EditPageTa.SetWidth(programWidth - (programWidth / 4) - 10)
+	EditPageTa.SetHeight(programHeight - 2)
+
+	RenderedPageRenderer, err := glamour.NewTermRenderer(glamour.WithAutoStyle())
+	if err != nil {
+		log.Fatal("Error: Markdown renderer failed to init")
+	}
+	RenderedPageVp := viewport.New(programWidth-(programWidth/4)-10, programHeight-2)
+
 	return model{
 		ProgramViewport:   ProgramVp,
 		ProgramState:      programStateLogin,
 		EmailTextInput:    emailTi,
 		PasswordTextInput: passwordTi,
 		LoginState:        loginStateEmail,
+		EditablePage:      EditPageTa,
+		Renderer:          *RenderedPageRenderer,
+		RenderedPage:      RenderedPageVp,
 		err:               nil,
 	}
 }
