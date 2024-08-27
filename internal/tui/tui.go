@@ -67,7 +67,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				selectedNotebook, ok := m.CachedNotebooks.SelectedItem().(cachedNotebook)
 				if ok {
 					m.SelectedNotebookID = selectedNotebook.id
-					m.SetPages()
+					m.ListPages()
 					m.ProgramState = statePages
 					m.PageState = statePageList
 				}
@@ -76,7 +76,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					selectedPage, ok := m.CachedPages.SelectedItem().(cachedPage)
 					if ok {
 						m.SelectedPageID = selectedPage.id
-						m.DisplaySelectedPage()
+						m.EditablePage.Reset()
+						m.DisplayEditablePage()
 					}
 				}
 			}
@@ -101,7 +102,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case statePages:
 			m.CachedPages, cmd = m.CachedPages.Update(msg)
 			cmds = append(cmds, cmd)
-			m.RenderedPage, cmd = m.RenderedPage.Update(msg)
+			m.EditablePage, cmd = m.EditablePage.Update(msg)
 			cmds = append(cmds, cmd)
 		}
 
@@ -162,7 +163,7 @@ func (m model) View() string {
 	case stateNotebooks:
 		programContent += notebookListStyle.Render(m.CachedNotebooks.View())
 	case statePages:
-		programContent += lipgloss.JoinHorizontal(lipgloss.Center, pageListStyle.Render(m.CachedPages.View()), pageStyle.Render(m.CurrentPage.View()))
+		programContent += lipgloss.JoinHorizontal(lipgloss.Center, pageListStyle.Render(m.CachedPages.View()), pageStyle.Render(m.EditablePage.View()))
 	}
 
 	return programStyle.Render(programContent)
