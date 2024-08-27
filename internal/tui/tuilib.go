@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/term"
 )
@@ -20,6 +21,9 @@ const (
 
 	stateEmail loginState = iota
 	statePassword
+
+	statePageList pagesState = iota
+	statePage
 )
 
 var (
@@ -40,6 +44,7 @@ var (
 	// Notebooks
 	notebookListStyle lipgloss.Style
 	pageListStyle     lipgloss.Style
+	pageStyle         lipgloss.Style
 
 	// Utils
 	banner = `
@@ -65,10 +70,16 @@ type model struct {
 	EmailTextInput    textinput.Model
 	PasswordTextInput textinput.Model
 
-	// Notebooks + Pages
+	// Notebooks
 	CachedNotebooks    list.Model
 	SelectedNotebookID string
-	CachedPages        list.Model
+	SelectedNotebook   api.Notebook
+
+	// Pages
+	PageState      pagesState
+	CachedPages    list.Model
+	SelectedPageID string
+	RenderedPage   viewport.Model
 
 	// Utils
 	err                 error
@@ -81,6 +92,7 @@ type loginState uint
 type loginSuccessMsg struct {
 	successfulSession *api.Session
 }
+type pagesState uint
 
 // For handling errors in our model
 type errMsg struct{ error }
@@ -124,16 +136,47 @@ func (m *model) SetPages() {
 	for notebookIndex := range m.Session.Notebooks {
 		if m.Session.Notebooks[notebookIndex].ID == m.SelectedNotebookID {
 			chosenNotebook = m.Session.Notebooks[notebookIndex]
+			m.SelectedNotebook = chosenNotebook
 			for _, page := range m.Session.Notebooks[notebookIndex].Pages {
 				cachedPages = append(cachedPages, cachedPage{title: page.Title, id: page.ID, updatedAt: page.UpdatedAt})
 			}
+			break
 		}
 	}
 
-	m.CachedPages = list.New(cachedPages, list.NewDefaultDelegate(), m.ProgramViewport.Width/2, m.ProgramViewport.Height/2)
+	m.CachedPages = list.New(cachedPages, list.NewDefaultDelegate(), programWidth/4, programHeight/2)
 	m.CachedPages.Title = chosenNotebook.Title
 	m.CachedPages.SetShowHelp(false)
 	m.CachedPages.DisableQuitKeybindings()
+	m.RenderedPage = viewport.New(programWidth-(programWidth/4), programHeight-2)
+	m.RenderedPage.SetContent("")
+
+}
+
+func (m *model) DisplaySelectedPage() error {
+	var str string
+	renderer, err := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(m.RenderedPage.Width),
+	)
+	if err != nil {
+		log.Fatal("Failed to create renderer")
+		return errMsg{err}
+	}
+
+	for _, page := range m.SelectedNotebook.Pages {
+		if page.ID == m.SelectedPageID {
+			str, err = renderer.Render(page.Content)
+			if err != nil {
+				log.Fatal("Failed to render")
+				return errMsg{err}
+			}
+			break
+		}
+	}
+
+	m.RenderedPage.SetContent(str)
+	return nil
 }
 
 // Initialize all global variables then return the model
@@ -179,12 +222,13 @@ func InitModel() model {
 		Align(lipgloss.Center, lipgloss.Center).
 		Margin(1, 2)
 	pageListStyle = lipgloss.NewStyle().
-		Width(programWidth).
+		Width(programWidth/4).
 		Height(programHeight-2).
 		Align(lipgloss.Left, lipgloss.Top).
 		Margin(1, 2)
-
-	// Utils
+	pageStyle = lipgloss.NewStyle().
+		Width(programWidth-(programWidth/4)).
+		Height(programHeight-2)
 
 	return newModel()
 }

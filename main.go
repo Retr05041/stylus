@@ -1,15 +1,15 @@
 package main
 
 import (
-	//"stylus/internal/tui"
+	"stylus/internal/tui"
 	"fmt"
 	"log"
 	"stylus/internal/api"
 )
 
 func main() {
-	apiTesting()
-	//tui.Start()
+	//apiTesting()
+	tui.Start()
 }
 
 func apiTesting() {

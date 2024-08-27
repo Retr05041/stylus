@@ -43,11 +43,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.ProgramState = stateNotebooks
 			}
 		case "tab":
-			if m.ProgramState == stateLogin {
-				if m.LoginState == stateEmail {
+			switch  m.ProgramState {
+			case stateLogin: 
+				switch m.LoginState {
+				case stateEmail: 
 					m.LoginState = statePassword
-				} else {
+				case statePassword:	
 					m.LoginState = stateEmail
+				}
+			case statePages:	
+				switch m.PageState {
+				case statePageList:
+					m.PageState = statePage
+				case statePage:
+					m.PageState = statePageList
 				}
 			}
 		case "enter":
@@ -60,6 +69,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.SelectedNotebookID = selectedNotebook.id
 					m.SetPages()
 					m.ProgramState = statePages
+					m.PageState = statePageList
+				}
+			case statePages:
+				if m.PageState == statePageList {
+					selectedPage, ok := m.CachedPages.SelectedItem().(cachedPage)
+					if ok {
+						m.SelectedPageID = selectedPage.id
+						m.DisplaySelectedPage()
+					}
 				}
 			}
 		}
@@ -82,6 +100,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 		case statePages:
 			m.CachedPages, cmd = m.CachedPages.Update(msg)
+			cmds = append(cmds, cmd)
+			m.RenderedPage, cmd = m.RenderedPage.Update(msg)
 			cmds = append(cmds, cmd)
 		}
 
@@ -142,7 +162,7 @@ func (m model) View() string {
 	case stateNotebooks:
 		programContent += notebookListStyle.Render(m.CachedNotebooks.View())
 	case statePages:
-		programContent += pageListStyle.Render(m.CachedPages.View())
+		programContent += lipgloss.JoinHorizontal(lipgloss.Center, pageListStyle.Render(m.CachedPages.View()), pageStyle.Render(m.RenderedPage.View()))
 	}
 
 	return programStyle.Render(programContent)
