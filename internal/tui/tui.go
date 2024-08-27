@@ -40,18 +40,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case stateNotebooks:
 				m.ProgramState = stateLogin
 			case statePages:
-				m.ProgramState = stateNotebooks
+				switch m.PageState {
+				case statePageList:
+					m.ProgramState = stateNotebooks
+				case statePage:
+					m.PageState = statePageList
+					m.EditablePage.Blur()
+				}
 			}
 		case "tab":
-			switch  m.ProgramState {
-			case stateLogin: 
+			switch m.ProgramState {
+			case stateLogin:
 				switch m.LoginState {
-				case stateEmail: 
+				case stateEmail:
 					m.LoginState = statePassword
-				case statePassword:	
+				case statePassword:
 					m.LoginState = stateEmail
 				}
-			case statePages:	
+			case statePages:
 				switch m.PageState {
 				case statePageList:
 					m.PageState = statePage
@@ -72,12 +78,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.PageState = statePageList
 				}
 			case statePages:
-				if m.PageState == statePageList {
+				switch m.PageState {
+				case statePageList:
 					selectedPage, ok := m.CachedPages.SelectedItem().(cachedPage)
 					if ok {
 						m.SelectedPageID = selectedPage.id
 						m.EditablePage.Reset()
 						m.DisplayEditablePage()
+						m.PageState = statePage
+						m.EditablePage.Focus()
 					}
 				}
 			}

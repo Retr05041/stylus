@@ -25,7 +25,6 @@ const (
 
 	statePageList pageState = iota
 	statePage
-	stateRenderPage
 )
 
 var (
@@ -82,7 +81,6 @@ type model struct {
 	CachedPages    list.Model
 	SelectedPageID string
 	EditablePage   textarea.Model
-	RenderedPage   viewport.Model
 
 	// Utils
 	err                 error
@@ -157,7 +155,6 @@ func (m *model) ListPages() {
 }
 
 func (m *model) DisplayEditablePage() {
-	m.EditablePage.Focus()
 	m.EditablePage.CursorStart()
 	m.EditablePage.InsertString("")
 
