@@ -61,6 +61,7 @@ type Page struct {
 	Content   string `json:"content"`
 }
 
+// So we can use these structs as items in the list.Model for our TUI
 func (n Notebook) Title() string       { return n.NotebookTitle }
 func (n Notebook) Description() string { return n.NotebookDescription }
 func (n Notebook) FilterValue() string { return n.ID }
