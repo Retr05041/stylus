@@ -152,6 +152,8 @@ func (m *model) ListPages() {
 
 	// So we display nothing... once listing is done
 	m.EditablePage = textarea.New()
+	m.EditablePage.SetWidth(programWidth-(programWidth/4)-10)
+	m.EditablePage.SetHeight(programHeight-2)
 }
 
 func (m *model) DisplayEditablePage() {
