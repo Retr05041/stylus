@@ -186,6 +186,15 @@ func (m *model) RenderPage() {
 
 }
 
+func (m *model) SavePageContent() {
+	for pageIndex, page := range m.SelectedNotebook.Pages {
+		if page.ID == m.SelectedPageID {
+			m.SelectedNotebook.Pages[pageIndex].Content = m.EditablePage.Value()
+			break
+		}
+	}
+}
+
 // Initialize all global variables then return the model
 func InitModel() model {
 	termWidth, termHeight, err := term.GetSize(0)
